@@ -1,0 +1,57 @@
+                           ----Password Database----
+nextrade123=-
+                           
+                            ----initilize----
+mkdir nextrade-backend
+cd nextrade-backend
+npm init -y
+
+                            ----required packages----
+npm install express mongoose dotenv cors bcryptjs jsonwebtoken multer
+npm install --save-dev nodemon
+| Package        | Use                                                                  |
+| -------------- | -------------------------------------------------------------------- |
+| `express`      | Node.js ke liye web framework — APIs banane ke liye                  |
+| `mongoose`     | MongoDB se easy tarike se data handle karne ke liye                  |
+| `dotenv`       | `.env` file se secrets (like DB URI, JWT key) load karne ke liye     |
+| `cors`         | Frontend-backend communication allow karne ke liye                   |
+| `bcryptjs`     | Password encrypt karne ke liye                                       |
+| `jsonwebtoken` | Login ke baad JWT token banane ke liye                               |
+| `nodemon`      | Server ko har save par auto restart karne ke liye (development tool) |
+| `Multer`       | the most common Node.js library for handling file uploads |
+                           
+                            ----package.json----
+"scripts": {
+  "start": "node server.js",
+  "dev": "nodemon server.js"
+}
+
+                            ----Server.js----
+1.  express ek framework hai Node.js ka jo server banane me help karta hai.
+2.  const cors = require("cors");
+    CORS ka matlab hai: Cross-Origin Resource Sharing
+    Ye allow karta hai ke React frontend (localhost:3000) backend se (localhost:5000) baat kar sake.
+3.  const connectDB = require("./config/db");
+    Ye humari custom file hai jisme MongoDB se connection ka code hoga.
+    Hum connectDB() function banayenge config/db.js me.
+4.  require("dotenv").config();
+    Ye .env file ko load karta hai, jisme:
+    Mongo URI
+    JWT secret
+    Other secrets rakhe jate hain
+    Security ke liye .env file ka use hota hai.
+5.  const app = express();
+    Ye express ka instance hai, jise hum server ke jesa treat karte hain.
+    app object se hum routes, middlewares waghera define karte hain.
+6.  
+
+Flask: Create a server/app to recive requests
+sklearn: skitlearn, a machine learnign library
+TfidfVectorizer: convert text to nmbrs to see how often a word come and how unique a word come in sentence
+->TF(Term frequency): How many times
+->IDF(inverse Document Frequency): How uniquly
+
+
+2IFi6Yhj1wYsPkeMSh0d64jE_HA
+998184338997357
+Root
