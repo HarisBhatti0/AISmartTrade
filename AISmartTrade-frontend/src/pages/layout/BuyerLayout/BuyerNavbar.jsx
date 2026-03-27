@@ -15,6 +15,400 @@ import MainLogo from "../../../assets/Main Logo.png";
 import { useAuth } from "../../../context/AuthContext";
 import API from "../../../api/axiosInstance";
 
+/* ─────────────────────────────────────────────
+   Inject scoped styles once (avoids Tailwind
+   collisions for the glassmorphism extras)
+───────────────────────────────────────────── */
+const NAV_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Syne:wght@400;500;600&display=swap');
+
+  :root {
+    --nav-glass: rgba(8, 12, 28, 0.72);
+    --nav-border: rgba(99, 179, 237, 0.18);
+    --nav-glow: #38bdf8;
+    --nav-accent: #818cf8;
+    --nav-surface: rgba(15, 23, 42, 0.85);
+    --nav-pill: rgba(30, 41, 70, 0.7);
+    --nav-text: #e2e8f0;
+    --nav-muted: #94a3b8;
+    --nav-danger: #f87171;
+  }
+
+  /* Navbar root */
+  .fng-nav {
+    background: var(--nav-glass);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--nav-border);
+    box-shadow: 0 4px 40px rgba(56, 189, 248, 0.08), 0 1px 0 rgba(129, 140, 248, 0.1);
+    font-family: 'Syne', sans-serif;
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+  }
+
+  /* Animated top line */
+  .fng-nav::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--nav-glow), var(--nav-accent), var(--nav-glow), transparent);
+    background-size: 200% 100%;
+    animation: fng-scan 4s linear infinite;
+  }
+
+  @keyframes fng-scan {
+    0%   { background-position: -100% 0; }
+    100% { background-position: 200%  0; }
+  }
+
+  /* Logo wordmark */
+  .fng-wordmark {
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 1.1rem;
+    background: linear-gradient(120deg, var(--nav-glow) 0%, var(--nav-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.04em;
+  }
+
+  .fng-badge {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--nav-glow);
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 2px 7px;
+    border-radius: 99px;
+    text-transform: uppercase;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  /* Search */
+  .fng-search-wrap {
+    position: relative;
+    width: 100%;
+  }
+  .fng-search-wrap input {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--nav-border);
+    border-radius: 10px;
+    padding: 9px 16px 9px 42px;
+    font-size: 0.8rem;
+    color: var(--nav-text);
+    font-family: 'Syne', sans-serif;
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  .fng-search-wrap input::placeholder { color: var(--nav-muted); }
+  .fng-search-wrap input:focus {
+    border-color: var(--nav-glow);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12), 0 0 20px rgba(56, 189, 248, 0.08);
+  }
+  .fng-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--nav-muted);
+    font-size: 0.75rem;
+    pointer-events: none;
+  }
+
+  /* Nav links */
+  .fng-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--nav-muted);
+    letter-spacing: 0.03em;
+    border: 1px solid transparent;
+    transition: color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .fng-link:hover {
+    color: var(--nav-glow);
+    background: rgba(56, 189, 248, 0.07);
+    border-color: rgba(56, 189, 248, 0.2);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.1);
+  }
+
+  /* Cart button */
+  .fng-cart {
+    position: relative;
+  }
+  .fng-cart-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: linear-gradient(135deg, var(--nav-glow), var(--nav-accent));
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    animation: fng-pulse 2s ease-in-out infinite;
+  }
+  @keyframes fng-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
+    50%       { box-shadow: 0 0 16px rgba(56, 189, 248, 0.9); }
+  }
+
+  /* Profile button */
+  .fng-profile-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    background: var(--nav-pill);
+    border: 1px solid var(--nav-border);
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--nav-text);
+    font-size: 0.8rem;
+    font-family: 'Syne', sans-serif;
+    font-weight: 500;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 140px;
+  }
+  .fng-profile-btn:hover {
+    border-color: rgba(56, 189, 248, 0.35);
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.1);
+  }
+
+  .fng-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+  }
+  .fng-avatar-fallback {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15));
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--nav-glow);
+    font-size: 0.65rem;
+  }
+
+  /* Profile dropdown */
+  .fng-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: 220px;
+    background: rgba(10, 15, 35, 0.92);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--nav-border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(56,189,248,0.05);
+    animation: fng-dropIn 0.18s ease-out;
+    z-index: 9999;
+  }
+  @keyframes fng-dropIn {
+    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+
+  .fng-dropdown-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(99,179,237,0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .fng-dropdown-header .fng-avatar-lg {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(56,189,248,0.4);
+  }
+  .fng-dropdown-header .fng-avatar-lg-fallback {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15));
+    border: 1px solid rgba(56,189,248,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--nav-glow);
+  }
+  .fng-dd-name {
+    font-weight: 600;
+    font-size: 0.83rem;
+    color: var(--nav-text);
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .fng-dd-email {
+    font-size: 0.7rem;
+    color: var(--nav-muted);
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fng-dd-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 16px;
+    font-size: 0.8rem;
+    font-family: 'Syne', sans-serif;
+    font-weight: 500;
+    color: var(--nav-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+    text-align: left;
+    text-decoration: none;
+  }
+  .fng-dd-item:hover {
+    color: var(--nav-glow);
+    background: rgba(56, 189, 248, 0.06);
+  }
+  .fng-dd-item.danger {
+    color: var(--nav-danger);
+    border-top: 1px solid rgba(99,179,237,0.08);
+  }
+  .fng-dd-item.danger:hover { background: rgba(248, 113, 113, 0.06); }
+
+  /* Auth buttons */
+  .fng-btn-ghost {
+    padding: 8px 18px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: 'Syne', sans-serif;
+    color: var(--nav-muted);
+    background: none;
+    border: 1px solid var(--nav-border);
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .fng-btn-ghost:hover { color: var(--nav-text); border-color: rgba(99,179,237,0.35); }
+
+  .fng-btn-primary {
+    padding: 8px 18px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: 'Syne', sans-serif;
+    color: #0f172a;
+    background: linear-gradient(135deg, var(--nav-glow) 0%, var(--nav-accent) 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+  }
+  .fng-btn-primary:hover {
+    opacity: 0.9;
+    box-shadow: 0 0 28px rgba(56, 189, 248, 0.4);
+  }
+
+  /* Mobile drawer */
+  .fng-mobile-drawer {
+    background: rgba(8, 12, 28, 0.97);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--nav-border);
+    animation: fng-slideDown 0.2s ease-out;
+  }
+  @keyframes fng-slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .fng-mobile-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    font-family: 'Syne', sans-serif;
+    color: var(--nav-muted);
+    border-radius: 8px;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+  }
+  .fng-mobile-link:hover {
+    color: var(--nav-glow);
+    background: rgba(56,189,248,0.07);
+    border-color: rgba(56,189,248,0.18);
+  }
+  .fng-mobile-link.danger { color: var(--nav-danger); }
+  .fng-mobile-link.danger:hover { background: rgba(248,113,113,0.07); border-color: rgba(248,113,113,0.2); }
+
+  .fng-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99,179,237,0.2), transparent);
+    margin: 6px 0;
+  }
+
+  .fng-mobile-user-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    margin-bottom: 4px;
+    background: rgba(56,189,248,0.04);
+    border: 1px solid rgba(56,189,248,0.1);
+    border-radius: 10px;
+  }
+
+  /* Chevron rotation */
+  .fng-chevron {
+    font-size: 0.65rem;
+    color: var(--nav-muted);
+    margin-left: auto;
+    transition: transform 0.2s;
+  }
+  .fng-chevron.open { transform: rotate(180deg); }
+`;
+
+/* Inject styles */
+if (typeof document !== "undefined" && !document.getElementById("fng-nav-styles")) {
+  const tag = document.createElement("style");
+  tag.id = "fng-nav-styles";
+  tag.textContent = NAV_STYLES;
+  document.head.appendChild(tag);
+}
+
+/* ─── Component ─── */
 const BuyerNavbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -28,10 +422,7 @@ const BuyerNavbar = () => {
   const getProfileImageUrl = (imagePath) => {
     if (!imagePath) return null;
     if (imagePath.startsWith("http")) return imagePath;
-    return `https://nextrade-backend-production-a486.up.railway.app/uploads/profiles/${imagePath.replace(
-      /^\/+/,
-      ""
-    )}`;
+    return `https://nextrade-backend-production-a486.up.railway.app/uploads/profiles/${imagePath.replace(/^\/+/, "")}`;
   };
 
   useEffect(() => {
@@ -39,31 +430,16 @@ const BuyerNavbar = () => {
       if (user && user.id) {
         try {
           const cartResponse = await API.get(`/cart/${user.id}`);
-          if (
-            cartResponse.data &&
-            cartResponse.data.products &&
-            Array.isArray(cartResponse.data.products)
-          ) {
-            const totalItems = cartResponse.data.products.reduce(
-              (total, item) => {
-                return total + (item.quantity || 1);
-              },
-              0
-            );
-            setCartItemsCount(totalItems);
-          } else {
-            setCartItemsCount(0);
-          }
+          if (cartResponse.data?.products && Array.isArray(cartResponse.data.products)) {
+            setCartItemsCount(cartResponse.data.products.reduce((t, i) => t + (i.quantity || 1), 0));
+          } else setCartItemsCount(0);
 
           const profileResponse = await API.get("/profile/me");
-          if (profileResponse.data && profileResponse.data.profileImage) {
+          if (profileResponse.data?.profileImage) {
             setProfileImage(profileResponse.data.profileImage);
             setImgError(false);
-          } else {
-            setProfileImage("");
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
+          } else setProfileImage("");
+        } catch {
           setCartItemsCount(0);
           setProfileImage("");
         }
@@ -72,49 +448,32 @@ const BuyerNavbar = () => {
         setProfileImage("");
       }
     };
-
     fetchUserData();
   }, [user]);
 
   useEffect(() => {
-    if (!user || !user.id) return;
-
+    if (!user?.id) return;
     const refreshCartCount = async () => {
       try {
-        const cartResponse = await API.get(`/cart/${user.id}`);
-        if (
-          cartResponse.data &&
-          cartResponse.data.products &&
-          Array.isArray(cartResponse.data.products)
-        ) {
-          const totalItems = cartResponse.data.products.reduce(
-            (total, item) => {
-              return total + (item.quantity || 1);
-            },
-            0
-          );
-          setCartItemsCount(totalItems);
-        } else {
-          setCartItemsCount(0);
-        }
-      } catch (error) {
-        console.error("Error refreshing cart count:", error);
-        setCartItemsCount(0);
-      }
+        const res = await API.get(`/cart/${user.id}`);
+        if (res.data?.products && Array.isArray(res.data.products))
+          setCartItemsCount(res.data.products.reduce((t, i) => t + (i.quantity || 1), 0));
+        else setCartItemsCount(0);
+      } catch { setCartItemsCount(0); }
     };
-
-    const handleRouteChange = () => {
-      refreshCartCount();
-    };
-
-    window.addEventListener("popstate", handleRouteChange);
+    window.addEventListener("popstate", refreshCartCount);
     const interval = setInterval(refreshCartCount, 30000);
-
-    return () => {
-      window.removeEventListener("popstate", handleRouteChange);
-      clearInterval(interval);
-    };
+    return () => { window.removeEventListener("popstate", refreshCartCount); clearInterval(interval); };
   }, [user]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (isProfileDropdownOpen && !e.target.closest(".fng-profile-wrap"))
+        setIsProfileDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isProfileDropdownOpen]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -134,325 +493,196 @@ const BuyerNavbar = () => {
     navigate("/");
   };
 
-  const handleProfileClick = () => {
-    setIsProfileDropdownOpen(!isProfileDropdownOpen);
-  };
-
-  const handleProfileAction = (action) => {
-    setIsProfileDropdownOpen(false);
-    setIsMenuOpen(false);
-    if (action === "profile") {
-      navigate("/profile");
-    } else if (action === "logout") {
-      handleLogout();
-    }
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isProfileDropdownOpen && !event.target.closest(".profile-dropdown")) {
-        setIsProfileDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isProfileDropdownOpen]);
-
   const navLinks = [
-    {
-      to: "/products",
-      label: "Products",
-      icon: <FaBoxOpen className="mr-2 text-sm" />,
-    },
-    {
-      to: "/orders",
-      label: "Orders",
-      icon: <FaReceipt className="mr-2 text-sm" />,
-    },
+    { to: "/products", label: "Products", icon: <FaBoxOpen style={{ fontSize: "0.75rem" }} /> },
+    { to: "/orders",   label: "Orders",   icon: <FaReceipt  style={{ fontSize: "0.75rem" }} /> },
   ];
 
-  return (
-    <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
-      <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center group">
-              <img
-                src={MainLogo}
-                alt="AISmartTrade Logo"
-                className="h-9 mr-3 transition-transform group-hover:scale-105"
-              />
-              <span className="text-2xl font-bold bg-gradient-primary-diagonal bg-clip-text text-transparent">
-                AISmartTrade
-              </span>
-              <span className="ml-2 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                B2B
-              </span>
-            </Link>
-          </div>
+  /* ── Avatar helper ── */
+  const Avatar = ({ size = "sm" }) => {
+    const cls = size === "lg" ? "fng-avatar-lg" : "fng-avatar";
+    const fbCls = size === "lg" ? "fng-avatar-lg-fallback" : "fng-avatar-fallback";
+    return profileImage && !imgError ? (
+      <img src={getProfileImageUrl(profileImage)} alt="Profile" className={cls} onError={() => setImgError(true)} />
+    ) : (
+      <div className={fbCls}><FaUser style={{ fontSize: size === "lg" ? "0.9rem" : "0.6rem" }} /></div>
+    );
+  };
 
-          {/* Search Bar - Desktop */}
-          <div className="hidden lg:flex flex-1 max-w-xl mx-8">
-            <form onSubmit={handleSearch} className="relative w-full">
-              <div className="relative">
-                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
-                <input
-                  type="text"
-                  placeholder="Search products, brands, categories..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm placeholder-gray-400 transition-all duration-200"
-                />
-              </div>
+  return (
+    <nav className="fng-nav">
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "64px" }}>
+
+          {/* ── Logo ── */}
+          <Link to="/" style={{ display: "flex", alignItems: "center", textDecoration: "none", gap: "4px" }}>
+            <img src={MainLogo} alt="Logo" style={{ height: "36px", marginRight: "4px" }} />
+            <span className="fng-wordmark">AISmartTrade</span>
+            <span className="fng-badge">B2B</span>
+          </Link>
+
+          {/* ── Search — Desktop ── */}
+          <div style={{ display: "none", flex: "1", maxWidth: "420px", margin: "0 32px" }} className="fng-desktop-search">
+            <form onSubmit={handleSearch} className="fng-search-wrap">
+              <FaSearch className="fng-search-icon" />
+              <input
+                type="text"
+                placeholder="Search products, brands, categories…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </form>
           </div>
 
-          {/* Navigation Links - Desktop */}
-          <div className="hidden lg:flex items-center space-x-1">
+          {/* ── Desktop Nav ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }} className="fng-desktop-nav">
             {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-primary-600 hover:bg-gray-50 transition-colors duration-200"
-              >
+              <Link key={link.to} to={link.to} className="fng-link">
                 {link.icon}
                 {link.label}
               </Link>
             ))}
 
-            {/* Cart Icon */}
-            <Link
-              to="/cart"
-              className="relative flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-primary-600 hover:bg-gray-50 transition-colors duration-200"
-            >
-              <FaShoppingCart className="text-base mr-2" />
+            {/* Cart */}
+            <Link to="/cart" className="fng-link fng-cart" style={{ position: "relative" }}>
+              <FaShoppingCart style={{ fontSize: "0.9rem" }} />
               Cart
               {cartItemsCount > 0 && (
-                <span className="ml-2 flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-primary-600 rounded-full">
-                  {cartItemsCount}
-                </span>
+                <span className="fng-cart-badge">{cartItemsCount}</span>
               )}
             </Link>
 
-            {/* Profile Dropdown or Login Button */}
+            {/* Profile or Auth */}
             {user ? (
-              <div className="relative profile-dropdown ml-2">
-                <button
-                  onClick={handleProfileClick}
-                  className="flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 border border-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 min-w-[140px]"
-                >
-                  <div className="flex items-center">
-                    {profileImage && !imgError ? (
-                      <img
-                        src={getProfileImageUrl(profileImage)}
-                        alt="Profile"
-                        className="w-6 h-6 rounded-full object-cover mr-2"
-                        onError={() => setImgError(true)}
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center mr-2">
-                        <FaUser className="text-primary-600 text-xs" />
-                      </div>
-                    )}
-                    <span className="truncate max-w-[80px]">
-                      {user.name || "Account"}
-                    </span>
-                  </div>
-                  <FaChevronDown
-                    className={`ml-2 text-xs transition-transform ${
-                      isProfileDropdownOpen ? "rotate-180" : ""
-                    }`}
-                  />
+              <div className="fng-profile-wrap" style={{ position: "relative", marginLeft: "6px" }}>
+                <button className="fng-profile-btn" onClick={() => setIsProfileDropdownOpen((v) => !v)}>
+                  <Avatar />
+                  <span style={{ flex: 1, textAlign: "left", maxWidth: "90px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {user.name || "Account"}
+                  </span>
+                  <FaChevronDown className={`fng-chevron ${isProfileDropdownOpen ? "open" : ""}`} />
                 </button>
 
-                {/* Profile Dropdown Menu */}
                 {isProfileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <div className="flex items-center">
-                        {profileImage && !imgError ? (
-                          <img
-                            src={getProfileImageUrl(profileImage)}
-                            alt="Profile"
-                            className="w-10 h-10 rounded-full object-cover mr-3"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center mr-3">
-                            <FaUser className="text-primary-600" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {user.name || "User"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {user.email || ""}
-                          </p>
-                        </div>
+                  <div className="fng-dropdown">
+                    <div className="fng-dropdown-header">
+                      <Avatar size="lg" />
+                      <div>
+                        <div className="fng-dd-name">{user.name || "User"}</div>
+                        <div className="fng-dd-email">{user.email || ""}</div>
                       </div>
                     </div>
-
-                    <button
-                      onClick={() => handleProfileAction("profile")}
-                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                    >
-                      <FaUser className="mr-3 text-gray-400" />
-                      My Profile
+                    <button className="fng-dd-item" onClick={() => { setIsProfileDropdownOpen(false); navigate("/profile"); }}>
+                      <FaUser style={{ fontSize: "0.75rem" }} /> My Profile
                     </button>
-                    <button
-                      onClick={() => handleProfileAction("logout")}
-                      className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150 border-t border-gray-100"
-                    >
-                      <FaSignOutAlt className="mr-3" />
-                      Sign Out
+                    <button className="fng-dd-item danger" onClick={handleLogout}>
+                      <FaSignOutAlt style={{ fontSize: "0.75rem" }} /> Sign Out
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center space-x-3">
-                <Link
-                  to="/login"
-                  className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors duration-200"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-primary rounded-lg hover:opacity-90 transition-opacity duration-200 shadow-sm"
-                >
-                  Register
-                </Link>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "6px" }}>
+                <Link to="/login"    className="fng-btn-ghost">Sign In</Link>
+                <Link to="/register" className="fng-btn-primary">Register</Link>
               </div>
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="flex items-center lg:hidden">
-            <Link
-              to="/cart"
-              className="relative p-2 mr-3 text-gray-700 hover:text-primary-600 transition-colors"
-            >
-              <FaShoppingCart className="text-lg" />
-              {cartItemsCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-primary-600 rounded-full">
-                  {cartItemsCount}
-                </span>
-              )}
+          {/* ── Mobile right ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }} className="fng-mobile-right">
+            <Link to="/cart" className="fng-link fng-cart" style={{ position: "relative", padding: "8px" }}>
+              <FaShoppingCart style={{ fontSize: "1rem" }} />
+              {cartItemsCount > 0 && <span className="fng-cart-badge">{cartItemsCount}</span>}
             </Link>
-
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+              onClick={() => setIsMenuOpen((v) => !v)}
+              className="fng-link"
+              style={{ padding: "8px", border: "1px solid var(--nav-border)", borderRadius: "8px", background: "var(--nav-pill)", cursor: "pointer" }}
             >
-              {isMenuOpen ? (
-                <FaTimes className="text-lg" />
-              ) : (
-                <FaBars className="text-lg" />
-              )}
+              {isMenuOpen ? <FaTimes style={{ fontSize: "1rem", color: "var(--nav-glow)" }} /> : <FaBars style={{ fontSize: "1rem" }} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* ── Mobile Drawer ── */}
       {isMenuOpen && (
-        <div className="lg:hidden border-t border-gray-100">
-          <div className="px-4 py-3 bg-white">
+        <div className="fng-mobile-drawer">
+          <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
             {/* Mobile Search */}
-            <form onSubmit={handleSearch} className="mb-4">
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm placeholder-gray-400"
-                />
-              </div>
+            <form onSubmit={handleSearch} className="fng-search-wrap" style={{ marginBottom: "12px" }}>
+              <FaSearch className="fng-search-icon" />
+              <input
+                type="text"
+                placeholder="Search products…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </form>
 
-            <div className="space-y-1">
-              {navLinks.map((link) => (
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="fng-mobile-link"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {link.icon} {link.label}
+              </Link>
+            ))}
+
+            <div className="fng-divider" />
+
+            {user ? (
+              <>
+                <div className="fng-mobile-user-card">
+                  <Avatar size="lg" />
+                  <div>
+                    <div className="fng-dd-name">{user.name || "User"}</div>
+                    <div className="fng-dd-email">{user.email || ""}</div>
+                  </div>
+                </div>
+
+                <Link to="/profile" className="fng-mobile-link" onClick={() => setIsMenuOpen(false)}>
+                  <FaUser style={{ fontSize: "0.75rem" }} /> My Profile
+                </Link>
+                <button className="fng-mobile-link danger" style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%" }} onClick={handleLogout}>
+                  <FaSignOutAlt style={{ fontSize: "0.75rem" }} /> Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login"    className="fng-mobile-link" onClick={() => setIsMenuOpen(false)}>
+                  Sign In
+                </Link>
                 <Link
-                  key={link.to}
-                  to={link.to}
-                  className="flex items-center px-4 py-3 text-sm font-medium text-gray-700 rounded-lg hover:text-primary-600 hover:bg-gray-50 transition-colors duration-200"
+                  to="/register"
+                  className="fng-btn-primary"
+                  style={{ textAlign: "center", borderRadius: "8px", padding: "11px 16px", display: "block" }}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {link.icon}
-                  {link.label}
+                  Register
                 </Link>
-              ))}
-
-              {user ? (
-                <>
-                  <div className="px-4 py-3 border-t border-gray-100">
-                    <div className="flex items-center">
-                      {profileImage && !imgError ? (
-                        <img
-                          src={getProfileImageUrl(profileImage)}
-                          alt="Profile"
-                          className="w-10 h-10 rounded-full object-cover mr-3"
-                          onError={() => setImgError(true)}
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center mr-3">
-                          <FaUser className="text-primary-600" />
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {user.name || "User"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {user.email || ""}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Link
-                    to="/profile"
-                    className="flex items-center px-4 py-3 text-sm font-medium text-gray-700 rounded-lg hover:text-primary-600 hover:bg-gray-50 transition-colors duration-200"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <FaUser className="mr-3 text-gray-400" />
-                    My Profile
-                  </Link>
-
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors duration-200"
-                  >
-                    <FaSignOutAlt className="mr-3" />
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    className="flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-700 rounded-lg hover:text-primary-600 hover:bg-gray-50 transition-colors duration-200 border border-gray-200"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-gradient-primary rounded-lg hover:opacity-90 transition-opacity duration-200 shadow-sm"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Register
-                  </Link>
-                </>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       )}
+
+      {/* Responsive overrides — replaces Tailwind hidden/flex */}
+      <style>{`
+        @media (min-width: 1024px) {
+          .fng-desktop-search { display: flex !important; }
+          .fng-desktop-nav    { display: flex !important; }
+          .fng-mobile-right   { display: none  !important; }
+        }
+        @media (max-width: 1023px) {
+          .fng-desktop-search { display: none  !important; }
+          .fng-desktop-nav    { display: none  !important; }
+          .fng-mobile-right   { display: flex  !important; }
+        }
+      `}</style>
     </nav>
   );
 };
