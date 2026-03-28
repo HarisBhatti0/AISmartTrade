@@ -9,6 +9,9 @@ const FeaturedCategories = lazy(() => import("./Components/featuredCatagory"));
 const AIRecommendations = lazy(() => import("./Components/AiRecommendation"));
 const BuyerAdCarousel = lazy(() => import("./Components/adComponent"));
 import HeroSection from "./Components/heroSection";
+import CTASection from "./Components/CTASection";
+
+
 
 const BuyerHome = () => {
   return (
@@ -36,7 +39,7 @@ const BuyerHome = () => {
       </Suspense>
 
       {/* CTA Section  */}
-      <section className="py-20 bg-gradient-primary-vertical text-white">
+      {/* <section className="py-20 bg-gradient-primary-vertical text-white">
         <div className="px-4 mx-auto max-w-4xl text-center">
           <h2 className="text-4xl font-bold mb-4 font-poppins">
             Ready to Grow Your Business?
@@ -61,7 +64,9 @@ const BuyerHome = () => {
             </Link>
           </div>
         </div>
-      </section>
+      </section> */}
+      <CTASection />
+      
     </div>
   );
 };

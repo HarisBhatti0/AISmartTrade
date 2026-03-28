@@ -1,7 +1,230 @@
 import React, { useState } from "react";
-import { FaWhatsapp, FaEnvelope, FaHeadset, FaTimes } from "react-icons/fa";
+import {
+  FaWhatsapp,
+  FaEnvelope,
+  FaHeadset,
+  FaTimes,
+  FaShieldAlt,
+  FaBoxOpen,
+  FaLayerGroup,
+  FaQuestionCircle,
+} from "react-icons/fa";
 import ContactFormModal from "./ContactFormModal";
 import { useRoute } from "../../context/RouteContext";
+
+const STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --nb:#00d4ff; --np:#7c3aed; --nc:#06ffd4; --ng:#00ff94;
+    --dark:#060912;
+  }
+
+  @keyframes cshPing  { 0%{transform:scale(1);opacity:.5} 100%{transform:scale(2.2);opacity:0} }
+  @keyframes cshPulse { 0%,100%{box-shadow:0 0 12px rgba(0,212,255,.5),0 0 0 0 rgba(0,212,255,0)} 50%{box-shadow:0 0 24px rgba(0,212,255,.8),0 0 0 8px rgba(0,212,255,.08)} }
+  @keyframes cshIn    { from{opacity:0;transform:translateY(12px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes cshDot   { 0%,100%{opacity:.4;transform:scale(.7)} 50%{opacity:1;transform:scale(1.3)} }
+  @keyframes cshShim  { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+  @keyframes cshSpin  { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+
+  /* ── FAB button ── */
+  .csh-fab {
+    position:relative;
+    width:58px; height:58px; border-radius:50%;
+    background:linear-gradient(135deg,var(--nb),var(--np));
+    border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:24px;
+    box-shadow:0 0 24px rgba(0,212,255,.55), 0 8px 32px rgba(0,0,0,.4);
+    animation:cshPulse 3s ease-in-out infinite;
+    transition:transform .2s;
+    z-index:2;
+  }
+  .csh-fab:hover { transform:scale(1.1); }
+
+  /* ping ring */
+  .csh-ping {
+    position:absolute; inset:0; border-radius:50%;
+    background:rgba(0,212,255,.25);
+    animation:cshPing 2s ease-out infinite;
+    z-index:1; pointer-events:none;
+  }
+
+  /* tooltip */
+  .csh-tooltip {
+    position:absolute; bottom:68px;
+    background:rgba(6,9,18,.95);
+    backdrop-filter:blur(12px);
+    border:1px solid rgba(0,212,255,.2);
+    border-radius:10px;
+    padding:5px 12px;
+    font-family:'Orbitron',sans-serif;
+    font-size:10px; font-weight:600;
+    color:var(--nb); letter-spacing:.5px;
+    white-space:nowrap;
+    opacity:0; pointer-events:none;
+    transition:opacity .2s;
+    box-shadow:0 0 14px rgba(0,212,255,.2);
+  }
+  .csh-fab:hover + .csh-ping + .csh-tooltip,
+  .csh-fab-wrap:hover .csh-tooltip { opacity:1; }
+
+  /* ── expanded panel ── */
+  .csh-panel {
+    position:absolute; bottom:72px;
+    width:268px;
+    background:#060912;
+    border:1px solid rgba(0,212,255,.15);
+    border-radius:20px;
+    overflow:hidden;
+    box-shadow:0 16px 60px rgba(0,0,0,.7), 0 0 0 1px rgba(0,212,255,.06);
+    animation:cshIn .22s ease-out;
+    z-index:10000;
+  }
+
+  /* gradient border mask */
+  .csh-panel::before {
+    content:'';
+    position:absolute; inset:-1px; border-radius:20px; padding:1px;
+    background:linear-gradient(135deg,rgba(0,212,255,.3),transparent 50%,rgba(124,58,237,.3));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+    pointer-events:none;
+  }
+
+  /* panel header */
+  .csh-panel-header {
+    padding:14px 16px 12px;
+    border-bottom:1px solid rgba(0,212,255,.08);
+    display:flex; align-items:center; justify-content:space-between;
+    position:relative;
+  }
+  /* scan line on header */
+  .csh-panel-header::after {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg,transparent,var(--nb),var(--nc),var(--np),transparent);
+    background-size:200% 100%;
+    animation:cshShim 3s linear infinite;
+  }
+  .csh-panel-title {
+    font-family:'Orbitron',sans-serif;
+    font-size:11px; font-weight:700;
+    letter-spacing:1px; color:var(--nb);
+    display:flex; align-items:center; gap:7px;
+  }
+  .csh-panel-dot {
+    width:6px; height:6px; border-radius:50%;
+    background:var(--nc); box-shadow:0 0 6px var(--nc);
+    animation:cshDot 1.5s ease-in-out infinite;
+  }
+  .csh-close-btn {
+    width:28px; height:28px; border-radius:8px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    color:rgba(255,255,255,.5); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s; font-size:11px;
+  }
+  .csh-close-btn:hover {
+    background:rgba(255,77,109,.1);
+    border-color:rgba(255,77,109,.3);
+    color:#ff4d6d;
+  }
+
+  /* panel body */
+  .csh-panel-body { padding:12px 14px 14px; display:flex; flex-direction:column; gap:8px; }
+
+  /* section label */
+  .csh-section-label {
+    font-size:9px; font-weight:700; letter-spacing:1.5px;
+    color:rgba(255,255,255,.28); text-transform:uppercase;
+    margin-bottom:2px; padding:0 2px;
+  }
+
+  /* WhatsApp option buttons */
+  .csh-wa-btn {
+    width:100%; padding:10px 12px;
+    background:rgba(0,255,148,.05);
+    border:1px solid rgba(0,255,148,.15);
+    border-radius:11px;
+    display:flex; align-items:center; gap:9px;
+    cursor:pointer; transition:all .22s;
+    text-align:left;
+    font-family:'Inter',sans-serif;
+  }
+  .csh-wa-btn:hover {
+    background:rgba(0,255,148,.1);
+    border-color:rgba(0,255,148,.3);
+    transform:translateX(3px);
+  }
+  .csh-wa-icon {
+    width:30px; height:30px; border-radius:9px; flex-shrink:0;
+    background:rgba(0,255,148,.1);
+    border:1px solid rgba(0,255,148,.2);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ng); font-size:14px;
+    transition:all .22s;
+  }
+  .csh-wa-btn:hover .csh-wa-icon {
+    background:rgba(0,255,148,.18);
+    box-shadow:0 0 12px rgba(0,255,148,.3);
+  }
+  .csh-wa-label { font-size:12px; font-weight:600; color:#fff; }
+  .csh-wa-sub   { font-size:10px; color:rgba(255,255,255,.35); }
+
+  /* Option icons map */
+  .csh-wa-btn[data-type="order"]   .csh-wa-icon { color:#00ff94; }
+  .csh-wa-btn[data-type="product"] .csh-wa-icon { color:var(--nb); background:rgba(0,212,255,.1); border-color:rgba(0,212,255,.2); }
+  .csh-wa-btn[data-type="product"]:hover .csh-wa-icon { background:rgba(0,212,255,.18); box-shadow:0 0 12px rgba(0,212,255,.3); }
+  .csh-wa-btn[data-type="bulk"]    .csh-wa-icon { color:#a78bfa; background:rgba(124,58,237,.1); border-color:rgba(124,58,237,.2); }
+  .csh-wa-btn[data-type="bulk"]:hover .csh-wa-icon { background:rgba(124,58,237,.18); box-shadow:0 0 12px rgba(124,58,237,.3); }
+  .csh-wa-btn[data-type="general"] .csh-wa-icon { color:var(--nb); }
+
+  /* divider */
+  .csh-divider {
+    height:1px;
+    background:linear-gradient(90deg,transparent,rgba(0,212,255,.15),transparent);
+    margin:2px 0;
+  }
+
+  /* email support btn */
+  .csh-email-btn {
+    width:100%; padding:11px 14px;
+    background:linear-gradient(135deg,var(--nb),var(--np));
+    border:none; border-radius:12px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    cursor:pointer; transition:all .25s;
+    font-family:'Inter',sans-serif;
+    font-size:12px; font-weight:700; color:#fff;
+    box-shadow:0 0 20px rgba(0,212,255,.35);
+  }
+  .csh-email-btn:hover {
+    transform:scale(1.03);
+    box-shadow:0 0 34px rgba(0,212,255,.6),0 0 60px rgba(124,58,237,.3);
+  }
+
+  /* footer note */
+  .csh-footer-note {
+    text-align:center; font-size:10px;
+    color:rgba(255,255,255,.22);
+    padding-top:4px; letter-spacing:.3px;
+  }
+`;
+
+const optionIcons = {
+  order: <FaBoxOpen />,
+  product: <FaShieldAlt />,
+  bulk: <FaLayerGroup />,
+  general: <FaQuestionCircle />,
+};
+
+const optionSubs = {
+  order: "Track, return, or modify",
+  product: "Specs, availability, pricing",
+  bulk: "Wholesale & B2B inquiries",
+  general: "Anything else",
+};
 
 const CustomerSupportHub = () => {
   const { getUserType } = useRoute();
@@ -13,51 +236,49 @@ const CustomerSupportHub = () => {
 
   const supportOptions = [
     {
+      key: "order",
       label: "Order Help",
       message: "Hello! I need help with my order.",
     },
     {
+      key: "product",
       label: "Product Info",
       message: "Hello! I have a question about a product.",
     },
     {
+      key: "bulk",
       label: "Bulk Order",
       message: "Hello! I want to place a bulk order.",
     },
     {
+      key: "general",
       label: "General Help",
       message: "Hello! I need general assistance.",
     },
   ];
 
-  const getPositionClass = () => {
-    if (userType === "seller") return "fixed bottom-6 left-6 z-[9999]";
-    if (userType === "buyer") return "fixed bottom-6 right-6 z-[9999]";
-    return "hidden";
+  const isLeft = userType === "seller";
+
+  const positionStyle = {
+    position: "fixed",
+    bottom: 24,
+    [isLeft ? "left" : "right"]: 24,
+    zIndex: 9999,
   };
 
-  const getExpandedPosition = () => {
-    if (userType === "seller") {
-      return "left-0 bottom-20"; // Position on left for seller
-    } else {
-      return "right-0 bottom-20"; // Position on right for buyer
-    }
+  const panelStyle = {
+    [isLeft ? "left" : "right"]: 0,
   };
 
-  const getExpandedWidthClass = () => {
-    if (userType === "seller") {
-      return "w-64"; // Fixed width for expanded panel
-    } else {
-      return "w-64";
-    }
+  const tooltipStyle = {
+    [isLeft ? "left" : "right"]: 0,
   };
 
-  const handleWhatsAppClick = (customMessage = null) => {
-    const message = customMessage || "Hello! I need help.";
-    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-      message
-    )}`;
-    window.open(url, "_blank");
+  const handleWhatsAppClick = (message = "Hello! I need help.") => {
+    window.open(
+      `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`,
+      "_blank",
+    );
     setIsExpanded(false);
   };
 
@@ -67,81 +288,87 @@ const CustomerSupportHub = () => {
   };
 
   if (userType === "admin") return null;
+  if (userType !== "buyer" && userType !== "seller") return null;
 
   return (
     <>
-      <div className={getPositionClass()}>
-        {/* Expanded Options - Position based on user type */}
+      <style>{STYLES}</style>
+
+      <div style={positionStyle}>
+        {/* ── Expanded panel ── */}
         {isExpanded && (
-          <div
-            className={`absolute ${getExpandedPosition()} bg-white rounded-lg shadow-xl p-4 ${getExpandedWidthClass()} border border-gray-200 z-[10000]`}
-            style={
-              userType === "seller"
-                ? { left: "0", bottom: "80px" }
-                : { right: "0", bottom: "80px" }
-            }
-          >
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold text-gray-800">Customer Service</h3>
+          <div className="csh-panel" style={panelStyle}>
+            {/* Header */}
+            <div className="csh-panel-header">
+              <div className="csh-panel-title">
+                <div className="csh-panel-dot" />
+                Customer Service
+              </div>
               <button
+                className="csh-close-btn"
                 onClick={() => setIsExpanded(false)}
-                className="text-gray-400 hover:text-gray-600"
               >
                 <FaTimes />
               </button>
             </div>
 
-            {/* Support Options */}
-            <div className="space-y-2 mb-4">
-              {supportOptions.map((option, index) => (
+            {/* Body */}
+            <div className="csh-panel-body">
+              <div className="csh-section-label">WhatsApp — Instant Reply</div>
+
+              {supportOptions.map((opt) => (
                 <button
-                  key={index}
-                  onClick={() => handleWhatsAppClick(option.message)}
-                  className="w-full text-left p-3 text-sm bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors border border-green-200 flex items-center"
+                  key={opt.key}
+                  data-type={opt.key}
+                  className="csh-wa-btn"
+                  onClick={() => handleWhatsAppClick(opt.message)}
                 >
-                  <FaWhatsapp className="mr-2 text-green-500" />
-                  {option.label}
+                  <div className="csh-wa-icon">{optionIcons[opt.key]}</div>
+                  <div>
+                    <div className="csh-wa-label">{opt.label}</div>
+                    <div className="csh-wa-sub">{optionSubs[opt.key]}</div>
+                  </div>
                 </button>
               ))}
-            </div>
 
-            {/* Contact Form Button */}
-            <button
-              onClick={handleContactFormClick}
-              className="w-full p-3 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors border border-blue-200 flex items-center justify-center"
-            >
-              <FaEnvelope className="mr-2 text-blue-500" />
-              Email Support
-            </button>
+              <div className="csh-divider" />
 
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <p className="text-xs text-gray-600 text-center">
+              <button
+                className="csh-email-btn"
+                onClick={handleContactFormClick}
+              >
+                <FaEnvelope size={12} />
+                Email Support
+              </button>
+
+              <div className="csh-footer-note">
                 Choose your preferred support method
-              </p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Main Support Button */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="relative flex items-center justify-center w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group"
-          title="Customer Service"
+        {/* ── FAB wrapper ── */}
+        <div
+          className="csh-fab-wrap"
+          style={{ position: "relative", display: "inline-block" }}
         >
-          <FaHeadset className="text-2xl" />
-
-          {/* Hover Tooltip - Position based on user type */}
-          <div
-            className={`absolute bottom-16 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap ${
-              userType === "seller" ? "left-0" : "right-0"
-            }`}
+          <button
+            className="csh-fab"
+            onClick={() => setIsExpanded((v) => !v)}
+            title="Customer Service"
           >
+            <FaHeadset />
+          </button>
+
+          {/* Ping ring */}
+          <div className="csh-ping" />
+
+          {/* Tooltip */}
+          <div className="csh-tooltip" style={tooltipStyle}>
             Customer Service
           </div>
-        </button>
-
-        {/* Pulse Effect */}
-        <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20 z-[-1]"></div>
+        </div>
       </div>
 
       {/* Contact Form Modal */}

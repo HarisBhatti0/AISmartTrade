@@ -12,12 +12,334 @@ import {
   FaShieldAlt,
   FaClock,
   FaWhatsapp,
-  FaBars,
   FaChevronDown,
   FaChevronUp,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axiosInstance";
+
+const STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --nb:#00d4ff; --np:#7c3aed; --nc:#06ffd4; --ng:#00ff94;
+    --nr:#ff4d6d; --ny:#ffd700; --dark:#060912;
+    --glass:rgba(255,255,255,0.04); --gb:rgba(0,212,255,0.12);
+  }
+
+  @keyframes cmShim  { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+  @keyframes cmDot   { 0%,100%{opacity:.4;transform:scale(.7)} 50%{opacity:1;transform:scale(1.3)} }
+  @keyframes cmOrb   { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(16px,-12px) scale(1.05)} }
+  @keyframes cmScan  { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
+  @keyframes cmPulse { 0%,100%{box-shadow:0 0 10px rgba(0,212,255,.25)} 50%{box-shadow:0 0 24px rgba(0,212,255,.6),0 0 48px rgba(124,58,237,.2)} }
+  @keyframes cmIn    { from{opacity:0;transform:scale(.96) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  @keyframes cmSpin  { to{transform:rotate(360deg)} }
+  @keyframes cmGrid  { 0%,100%{opacity:.04} 50%{opacity:.08} }
+
+  /* ── backdrop ── */
+  .cm-backdrop {
+    position:fixed; inset:0;
+    background:rgba(5,8,16,0.85);
+    backdrop-filter:blur(8px);
+    display:flex; align-items:center; justify-content:center;
+    z-index:10000; padding:16px;
+    font-family:'Inter',sans-serif;
+  }
+
+  /* ── modal shell ── */
+  .cm-modal {
+    width:100%; max-width:900px;
+    max-height:94vh;
+    background:#060912;
+    border:1px solid var(--gb);
+    border-radius:24px;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    position:relative;
+    animation:cmIn .25s ease-out;
+    animation:cmPulse 4s ease-in-out infinite, cmIn .25s ease-out;
+  }
+
+  /* gradient border mask */
+  .cm-modal::before {
+    content:'';
+    position:absolute; inset:-1px; border-radius:24px; padding:1px;
+    background:linear-gradient(135deg,rgba(0,212,255,.3),transparent 50%,rgba(124,58,237,.3));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+    pointer-events:none; z-index:0;
+  }
+
+  /* grid overlay */
+  .cm-modal::after {
+    content:'';
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(0,212,255,.045) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,212,255,.045) 1px,transparent 1px);
+    background-size:48px 48px;
+    animation:cmGrid 5s ease-in-out infinite;
+    pointer-events:none; z-index:0;
+  }
+
+  /* orbs */
+  .cm-orb {
+    position:absolute; border-radius:50%;
+    filter:blur(70px); pointer-events:none; z-index:0;
+  }
+
+  /* ── header ── */
+  .cm-header {
+    position:relative; z-index:2;
+    background:rgba(0,212,255,0.04);
+    border-bottom:1px solid rgba(0,212,255,0.1);
+    padding:20px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-shrink:0;
+  }
+  /* scan line on header top */
+  .cm-header::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg,transparent,var(--nb),var(--nc),var(--np),var(--nb),transparent);
+    background-size:200% 100%;
+    animation:cmScan 4s linear infinite;
+  }
+  .cm-header-icon {
+    width:46px; height:46px; border-radius:14px;
+    background:rgba(0,212,255,0.1);
+    border:1px solid rgba(0,212,255,0.25);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--nb); font-size:20px; flex-shrink:0;
+    box-shadow:0 0 16px rgba(0,212,255,0.25);
+  }
+  .cm-header-title {
+    font-family:'Orbitron',sans-serif;
+    font-size:clamp(1rem,2vw,1.3rem); font-weight:700; color:#fff;
+    margin:0 0 3px;
+  }
+  .cm-header-sub { font-size:12px; color:rgba(255,255,255,.4); margin:0; }
+  .cm-close-btn {
+    width:36px; height:36px; border-radius:10px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);
+    color:rgba(255,255,255,.6); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s; flex-shrink:0;
+  }
+  .cm-close-btn:hover {
+    background:rgba(255,77,109,.1);
+    border-color:rgba(255,77,109,.3);
+    color:var(--nr);
+  }
+  .cm-mobile-toggle {
+    width:36px; height:36px; border-radius:10px;
+    background:rgba(0,212,255,.07);
+    border:1px solid rgba(0,212,255,.2);
+    color:var(--nb); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s; margin-right:8px;
+  }
+  .cm-mobile-toggle:hover { background:rgba(0,212,255,.15); }
+
+  /* ── body layout ── */
+  .cm-body {
+    display:flex; flex:1; min-height:0; position:relative; z-index:2;
+    overflow:hidden;
+  }
+
+  /* ── sidebar ── */
+  .cm-sidebar {
+    width:280px; flex-shrink:0;
+    background:rgba(0,212,255,0.03);
+    border-right:1px solid rgba(0,212,255,0.08);
+    padding:20px;
+    display:flex; flex-direction:column; gap:14px;
+    overflow-y:auto;
+  }
+
+  /* auth status chip */
+  .cm-auth-chip {
+    border-radius:14px; padding:14px;
+    display:flex; align-items:flex-start; gap:10px;
+  }
+  .cm-auth-chip.logged-out {
+    background:rgba(255,193,7,.05);
+    border:1px solid rgba(255,193,7,.2);
+  }
+  .cm-auth-chip.logged-in {
+    background:rgba(0,255,148,.05);
+    border:1px solid rgba(0,255,148,.18);
+  }
+  .cm-auth-icon {
+    width:34px; height:34px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+  }
+  .cm-auth-icon.warn { background:rgba(255,193,7,.1); color:#ffd700; }
+  .cm-auth-icon.ok   { background:rgba(0,255,148,.1); color:var(--ng); }
+  .cm-auth-label  { font-size:12px; font-weight:600; color:#fff; margin-bottom:2px; }
+  .cm-auth-sublabel{ font-size:11px; color:rgba(255,255,255,.38); }
+  .cm-login-btn {
+    width:100%; margin-top:10px; padding:9px 14px;
+    background:linear-gradient(135deg,#ffd700,#f97316);
+    border:none; border-radius:10px;
+    color:#060912; font-weight:700; font-size:12px;
+    font-family:'Inter',sans-serif; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    transition:transform .2s, box-shadow .3s;
+    box-shadow:0 0 16px rgba(255,215,0,.3);
+  }
+  .cm-login-btn:hover { transform:scale(1.04); box-shadow:0 0 28px rgba(255,215,0,.5); }
+
+  /* sidebar section title */
+  .cm-sidebar-title {
+    font-family:'Orbitron',sans-serif;
+    font-size:11px; font-weight:600; letter-spacing:1.5px;
+    color:var(--nb); text-transform:uppercase;
+    display:flex; align-items:center; gap:7px;
+  }
+  .cm-sidebar-dot {
+    width:6px; height:6px; border-radius:50%;
+    background:var(--nc); box-shadow:0 0 6px var(--nc);
+    animation:cmDot 1.6s ease-in-out infinite;
+  }
+
+  /* support option cards */
+  .cm-support-card {
+    border-radius:12px; padding:12px 14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(0,212,255,.1);
+    display:flex; align-items:center; gap:10px;
+    cursor:pointer; transition:all .25s;
+    text-align:left; width:100%;
+    font-family:'Inter',sans-serif;
+  }
+  .cm-support-card:hover {
+    background:rgba(0,212,255,.07);
+    border-color:rgba(0,212,255,.25);
+    transform:translateY(-2px);
+  }
+  .cm-support-card.whatsapp:hover {
+    background:rgba(0,255,148,.06);
+    border-color:rgba(0,255,148,.25);
+  }
+  .cm-sc-icon {
+    width:36px; height:36px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+  }
+  .cm-sc-icon.blue  { background:rgba(0,212,255,.1); color:var(--nb); }
+  .cm-sc-icon.green { background:rgba(0,255,148,.1); color:var(--ng); }
+  .cm-sc-label { font-size:13px; font-weight:600; color:#fff; }
+  .cm-sc-sub   { font-size:11px; color:rgba(255,255,255,.38); }
+
+  /* info list */
+  .cm-info-list { display:flex; flex-direction:column; gap:10px; padding-top:12px; border-top:1px solid rgba(0,212,255,.08); }
+  .cm-info-item { display:flex; align-items:center; gap:8px; font-size:12px; color:rgba(255,255,255,.4); }
+  .cm-info-icon { font-size:11px; flex-shrink:0; }
+
+  /* ── form panel ── */
+  .cm-form-panel {
+    flex:1; padding:24px;
+    display:flex; flex-direction:column; gap:16px;
+    overflow-y:auto; min-width:0;
+  }
+
+  /* form row */
+  .cm-form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media(max-width:540px){ .cm-form-row{ grid-template-columns:1fr; } }
+
+  /* field group */
+  .cm-field { display:flex; flex-direction:column; gap:7px; }
+  .cm-label {
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; font-weight:600; color:rgba(255,255,255,.55);
+    letter-spacing:.4px; text-transform:uppercase;
+  }
+  .cm-label-icon { color:var(--nb); font-size:10px; }
+
+  /* edit/save btn inline */
+  .cm-edit-btn {
+    margin-left:auto; background:none; border:none; cursor:pointer;
+    padding:2px 6px; border-radius:6px;
+    font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px;
+    transition:all .2s;
+  }
+  .cm-edit-btn.edit { color:rgba(0,212,255,.7); }
+  .cm-edit-btn.edit:hover { color:var(--nb); background:rgba(0,212,255,.08); }
+  .cm-edit-btn.save { color:rgba(0,255,148,.7); }
+  .cm-edit-btn.save:hover { color:var(--ng); background:rgba(0,255,148,.08); }
+
+  /* inputs */
+  .cm-input, .cm-textarea {
+    width:100%; box-sizing:border-box;
+    background:rgba(0,212,255,.04);
+    border:1px solid rgba(0,212,255,.18);
+    border-radius:12px;
+    color:#fff; font-size:13px;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:border-color .25s, box-shadow .25s;
+  }
+  .cm-input { padding:11px 14px; }
+  .cm-textarea { padding:11px 14px; resize:none; min-height:120px; flex:1; }
+  .cm-input::placeholder, .cm-textarea::placeholder { color:rgba(255,255,255,.25); }
+  .cm-input:focus, .cm-textarea:focus {
+    border-color:var(--nb);
+    box-shadow:0 0 0 3px rgba(0,212,255,.12), 0 0 18px rgba(0,212,255,.08);
+  }
+  .cm-input:disabled {
+    background:rgba(255,255,255,.03);
+    border-color:rgba(255,255,255,.08);
+    color:rgba(255,255,255,.3);
+    cursor:not-allowed;
+  }
+
+  /* message field flex */
+  .cm-msg-field { display:flex; flex-direction:column; gap:7px; flex:1; min-height:0; }
+
+  /* submit btn */
+  .cm-submit {
+    width:100%; padding:14px;
+    border:none; border-radius:14px;
+    font-weight:700; font-size:14px;
+    font-family:'Inter',sans-serif;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:transform .25s, box-shadow .3s;
+    flex-shrink:0;
+  }
+  .cm-submit.active {
+    background:linear-gradient(135deg,var(--nb),var(--np));
+    color:#fff;
+    box-shadow:0 0 28px rgba(0,212,255,.45);
+  }
+  .cm-submit.active:hover:not(:disabled) {
+    transform:scale(1.03);
+    box-shadow:0 0 50px rgba(0,212,255,.65),0 0 90px rgba(124,58,237,.3);
+  }
+  .cm-submit.disabled {
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);
+    color:rgba(255,255,255,.3);
+    cursor:not-allowed;
+  }
+  .cm-spinner {
+    width:16px; height:16px;
+    border:2px solid rgba(255,255,255,.2);
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:cmSpin .8s linear infinite;
+  }
+
+  /* ── mobile sidebar toggle ── */
+  @media(max-width:1023px){
+    .cm-sidebar { width:100%; border-right:none; border-bottom:1px solid rgba(0,212,255,.08); }
+    .cm-body    { flex-direction:column; }
+    .cm-sidebar.collapsed { display:none; }
+  }
+  @media(min-width:1024px){
+    .cm-mobile-toggle { display:none !important; }
+  }
+`;
 
 const ContactFormModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
@@ -33,11 +355,9 @@ const ContactFormModal = ({ isOpen, onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Check authentication and load user data
   useEffect(() => {
     if (isOpen) {
       checkAuthentication();
-      // Reset mobile menu state on open
       setIsMobileMenuOpen(false);
     }
   }, [isOpen]);
@@ -46,12 +366,11 @@ const ContactFormModal = ({ isOpen, onClose }) => {
     try {
       const userData = JSON.parse(localStorage.getItem("user"));
       const token = localStorage.getItem("token");
-
       if (userData && token) {
         setUser(userData);
         setIsLoggedIn(true);
-        setFormData((prev) => ({
-          ...prev,
+        setFormData((p) => ({
+          ...p,
           name: userData.name || userData.username || "",
           email: userData.email || "",
         }));
@@ -60,33 +379,21 @@ const ContactFormModal = ({ isOpen, onClose }) => {
         setUser(null);
         setFormData({ name: "", email: "", subject: "", message: "" });
       }
-    } catch (error) {
-      console.error("Auth check error:", error);
+    } catch {
       setIsLoggedIn(false);
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   const handleNameEdit = () => setIsEditingName(true);
   const handleNameSave = () => setIsEditingName(false);
-
   const handleLoginRedirect = () => {
     onClose();
     navigate("/login");
   };
-
   const handleWhatsAppRedirect = () => {
-    const whatsappNumber = "923065278287";
-    const message = "Hello! I need help with my inquiry.";
-    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-      message
-    )}`;
+    const url = `https://wa.me/923065278287?text=${encodeURIComponent("Hello! I need help with my inquiry.")}`;
     window.open(url, "_blank");
   };
 
@@ -97,21 +404,17 @@ const ContactFormModal = ({ isOpen, onClose }) => {
       handleLoginRedirect();
       return;
     }
-
     setIsSubmitting(true);
     try {
-      const requestData = {
+      const response = await API.post("/contact", {
         name: formData.name,
         email: formData.email,
         subject: formData.subject,
         message: formData.message,
         userId: user.id || user._id,
         userEmail: user.email,
-      };
-
-      const response = await API.post("/contact", requestData);
-
-      if (response.data && response.data.success) {
+      });
+      if (response.data?.success) {
         setFormData({
           name: user.name || user.username || "",
           email: user.email || "",
@@ -120,22 +423,16 @@ const ContactFormModal = ({ isOpen, onClose }) => {
         });
         setIsEditingName(false);
         onClose();
-      } else {
+      } else
         throw new Error(response.data?.message || "Failed to send message");
-      }
     } catch (error) {
-      console.error("Full error details:", error);
-      if (error.response?.status === 404) {
-        alert(
-          "Contact service is currently unavailable. Please try again later or use WhatsApp support."
-        );
-      } else if (error.response?.status === 500) {
+      if (error.response?.status === 404)
+        alert("Contact service unavailable. Please try WhatsApp support.");
+      else if (error.response?.status === 500)
         alert("Server error. Please try again later.");
-      } else if (error.request) {
-        alert("Network error. Please check your connection and try again.");
-      } else {
-        alert("An unexpected error occurred. Please try again.");
-      }
+      else if (error.request)
+        alert("Network error. Please check your connection.");
+      else alert("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -144,301 +441,309 @@ const ContactFormModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-2 sm:p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl transform transition-all border border-neutral-200 flex flex-col max-h-[95vh] sm:max-h-[90vh] mx-auto">
-        {/* Header with Gradient */}
-        <div className="bg-gradient-primary-vertical rounded-t-xl p-4 sm:p-6 text-white flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="p-2 sm:p-3 bg-white bg-opacity-20 rounded-lg sm:rounded-xl">
-                <FaHeadset className="text-xl sm:text-2xl text-primary-600" />
+    <>
+      <style>{STYLES}</style>
+
+      <div
+        className="cm-backdrop"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
+        <div className="cm-modal">
+          {/* Orbs */}
+          <div
+            className="cm-orb"
+            style={{
+              width: 320,
+              height: 320,
+              background:
+                "radial-gradient(circle,rgba(124,58,237,.2) 0%,transparent 70%)",
+              top: -100,
+              left: -80,
+              animation: "cmOrb 12s ease-in-out infinite",
+            }}
+          />
+          <div
+            className="cm-orb"
+            style={{
+              width: 240,
+              height: 240,
+              background:
+                "radial-gradient(circle,rgba(0,212,255,.15) 0%,transparent 70%)",
+              bottom: -60,
+              right: -40,
+              animation: "cmOrb 15s ease-in-out infinite reverse",
+            }}
+          />
+
+          {/* ── Header ── */}
+          <div className="cm-header">
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div className="cm-header-icon">
+                <FaHeadset />
               </div>
               <div>
-                <h2 className="text-lg sm:text-2xl font-bold">
-                  Contact Support
-                </h2>
-                <p className="text-blue-100 text-xs sm:text-sm mt-1">
-                  Get help with your orders, products, or any questions
+                <p className="cm-header-title">Contact Support</p>
+                <p className="cm-header-sub">
+                  Get help with orders, products, or any questions
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              {/* Mobile Toggle Button */}
+            <div style={{ display: "flex", alignItems: "center" }}>
               <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden text-white hover:text-blue-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                className="cm-mobile-toggle"
+                onClick={() => setIsMobileMenuOpen((v) => !v)}
               >
-                {isMobileMenuOpen ? <FaChevronUp /> : <FaChevronDown />}
-              </button>
-              <button
-                onClick={onClose}
-                className="text-white hover:text-blue-200 transition-colors p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
-              >
-                <FaTimes className="text-xl" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content - Responsive Layout */}
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0">
-          {/* Support Options Panel - Hidden on mobile when collapsed */}
-          <div
-            className={`
-            ${isMobileMenuOpen ? "block" : "hidden"} 
-            lg:block lg:w-1/3 
-            bg-gradient-to-b from-blue-50 to-purple-50 
-            p-4 sm:p-6 
-            border-b lg:border-r border-neutral-200 
-            flex flex-col
-            transition-all duration-300
-          `}
-          >
-            {/* Authentication Status */}
-            {!isLoggedIn && (
-              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-amber-100 rounded-lg">
-                    <FaShieldAlt className="text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-amber-800 font-medium text-sm">
-                      Login Required
-                    </p>
-                    <p className="text-amber-600 text-xs mt-1">
-                      Use your account for personalized support
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleLoginRedirect}
-                  className="w-full mt-3 flex items-center justify-center px-3 py-2 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition-colors shadow-sm"
-                >
-                  Login to Continue
-                  <FaArrowRight className="ml-2 text-xs" />
-                </button>
-              </div>
-            )}
-
-            {isLoggedIn && (
-              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-emerald-100 rounded-lg">
-                    <FaCheck className="text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-emerald-800 font-medium text-sm">
-                      Welcome back!
-                    </p>
-                    <p className="text-emerald-600 text-xs mt-1 truncate">
-                      {user?.email}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Support Options */}
-            <div className="space-y-4 flex-1">
-              <h3 className="font-semibold text-neutral-700 text-base sm:text-lg">
-                Quick Support
-              </h3>
-
-              <div className="space-y-3">
-                <div className="p-3 sm:p-4 bg-white border border-neutral-200 rounded-lg hover:border-blue-300 transition-colors cursor-pointer">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <FaHeadset className="text-blue-600 text-sm" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-neutral-800 text-sm">
-                        Email Support
-                      </p>
-                      <p className="text-neutral-600 text-xs">
-                        24-48 hour response
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleWhatsAppRedirect}
-                  className="w-full p-3 sm:p-4 bg-white border border-neutral-200 rounded-lg hover:border-green-300 transition-colors text-left"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <FaWhatsapp className="text-green-600 text-sm" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-neutral-800 text-sm">
-                        WhatsApp Chat
-                      </p>
-                      <p className="text-neutral-600 text-xs">
-                        Instant response
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              {/* Support Info */}
-              <div className="mt-4 sm:mt-auto pt-4 sm:pt-6 border-t border-neutral-200">
-                <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-neutral-600">
-                  <div className="flex items-center space-x-2">
-                    <FaClock className="text-blue-500 text-xs" />
-                    <span>24/7 Email Support</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <FaShieldAlt className="text-green-500 text-xs" />
-                    <span>Secure & Private</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <FaHeadset className="text-purple-500 text-xs" />
-                    <span>Expert Assistance</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Form */}
-          <div className="w-full lg:w-2/3 p-4 sm:p-6 flex flex-col min-h-0">
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-4 flex-1 min-h-0 flex flex-col"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 flex-shrink-0">
-                {/* Name Field */}
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <label className="flex items-center text-sm font-semibold text-neutral-700">
-                      <FaUser className="mr-2 text-blue-500 text-xs" />
-                      Your Name
-                    </label>
-                    {isLoggedIn && !isEditingName && (
-                      <button
-                        type="button"
-                        onClick={handleNameEdit}
-                        className="ml-2 text-blue-500 hover:text-blue-700 transition-colors"
-                        title="Edit name"
-                      >
-                        <FaEdit className="text-xs" />
-                      </button>
-                    )}
-                    {isLoggedIn && isEditingName && (
-                      <button
-                        type="button"
-                        onClick={handleNameSave}
-                        className="ml-2 text-green-500 hover:text-green-700 transition-colors flex"
-                        title="Save name"
-                      >
-                        <FaCheck className="text-xs" />
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    disabled={isLoggedIn && !isEditingName}
-                    className={`w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-800 placeholder-neutral-500 text-sm ${
-                      isLoggedIn && !isEditingName
-                        ? "bg-neutral-100 text-neutral-600 cursor-not-allowed"
-                        : "bg-white hover:border-neutral-400"
-                    }`}
-                    placeholder="Full name"
-                  />
-                </div>
-
-                {/* Email Field */}
-                <div className="space-y-2">
-                  <label className="flex items-center text-sm font-semibold text-neutral-700">
-                    <FaEnvelope className="mr-2 text-blue-500 text-xs" />
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    disabled={isLoggedIn}
-                    className={`w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-800 placeholder-neutral-500 text-sm ${
-                      isLoggedIn
-                        ? "bg-neutral-100 text-neutral-600 cursor-not-allowed"
-                        : "bg-white hover:border-neutral-400"
-                    }`}
-                    placeholder="your@email.com"
-                  />
-                </div>
-              </div>
-
-              {/* Subject Field */}
-              <div className="space-y-2 flex-shrink-0">
-                <label className="flex items-center text-sm font-semibold text-neutral-700">
-                  <FaTag className="mr-2 text-blue-500 text-xs" />
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-800 placeholder-neutral-500 text-sm bg-white hover:border-neutral-400"
-                  placeholder="Brief subject of your inquiry"
-                />
-              </div>
-
-              {/* Message Field */}
-              <div className="space-y-2 flex-1 min-h-0 flex flex-col">
-                <label className="flex items-center text-sm font-semibold text-neutral-700 flex-shrink-0">
-                  <FaPaperPlane className="mr-2 text-blue-500 text-xs" />
-                  Message
-                </label>
-                <textarea
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  required
-                  className="flex-1 w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-800 placeholder-neutral-500 text-sm bg-white hover:border-neutral-400 resize-none min-h-[100px] sm:min-h-[120px]"
-                  placeholder="Please describe your issue or question in detail..."
-                />
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting || !isLoggedIn}
-                className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-300 flex items-center justify-center shadow-sm flex-shrink-0 ${
-                  !isLoggedIn
-                    ? "bg-neutral-400 cursor-not-allowed transform-none"
-                    : "bg-gradient-primary-vertical hover:bg-secondary-600 disabled:from-neutral-400 disabled:to-neutral-500 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
-                }`}
-              >
-                {!isLoggedIn ? (
-                  "Please Login to Send Message"
-                ) : isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-3"></div>
-                    <span className="text-sm sm:text-base">
-                      Sending Your Message...
-                    </span>
-                  </>
+                {isMobileMenuOpen ? (
+                  <FaChevronUp size={12} />
                 ) : (
-                  <>
-                    <FaPaperPlane className="mr-3" />
-                    <span className="text-sm sm:text-base">Send Message</span>
-                  </>
+                  <FaChevronDown size={12} />
                 )}
               </button>
-            </form>
+              <button className="cm-close-btn" onClick={onClose}>
+                <FaTimes size={14} />
+              </button>
+            </div>
           </div>
+
+          {/* ── Body ── */}
+          <div className="cm-body">
+            {/* ── Sidebar ── */}
+            <div
+              className={`cm-sidebar ${!isMobileMenuOpen ? "collapsed" : ""}`}
+              style={{}}
+              id="cm-sidebar-panel"
+            >
+              {/* Force show on desktop via CSS, toggle on mobile */}
+
+              {/* Auth chip */}
+              {!isLoggedIn ? (
+                <div className="cm-auth-chip logged-out">
+                  <div className="cm-auth-icon warn">
+                    <FaShieldAlt />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div className="cm-auth-label">Login Required</div>
+                    <div className="cm-auth-sublabel">
+                      Use your account for personalized support
+                    </div>
+                    <button
+                      className="cm-login-btn"
+                      onClick={handleLoginRedirect}
+                    >
+                      Login to Continue <FaArrowRight size={10} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="cm-auth-chip logged-in">
+                  <div className="cm-auth-icon ok">
+                    <FaCheck />
+                  </div>
+                  <div>
+                    <div className="cm-auth-label">Welcome back!</div>
+                    <div
+                      className="cm-auth-sublabel"
+                      style={{
+                        maxWidth: 160,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {user?.email}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick support */}
+              <div className="cm-sidebar-title">
+                <div className="cm-sidebar-dot" />
+                Quick Support
+              </div>
+
+              <div className="cm-support-card">
+                <div className="cm-sc-icon blue">
+                  <FaHeadset />
+                </div>
+                <div>
+                  <div className="cm-sc-label">Email Support</div>
+                  <div className="cm-sc-sub">24–48 hour response</div>
+                </div>
+              </div>
+
+              <button
+                className="cm-support-card whatsapp"
+                onClick={handleWhatsAppRedirect}
+              >
+                <div className="cm-sc-icon green">
+                  <FaWhatsapp />
+                </div>
+                <div>
+                  <div className="cm-sc-label">WhatsApp Chat</div>
+                  <div className="cm-sc-sub">Instant response</div>
+                </div>
+              </button>
+
+              {/* Info list */}
+              <div className="cm-info-list">
+                <div className="cm-info-item">
+                  <FaClock
+                    className="cm-info-icon"
+                    style={{ color: "var(--nb)" }}
+                  />{" "}
+                  24/7 Email Support
+                </div>
+                <div className="cm-info-item">
+                  <FaShieldAlt
+                    className="cm-info-icon"
+                    style={{ color: "var(--ng)" }}
+                  />{" "}
+                  Secure &amp; Private
+                </div>
+                <div className="cm-info-item">
+                  <FaHeadset
+                    className="cm-info-icon"
+                    style={{ color: "var(--np)" }}
+                  />{" "}
+                  Expert Assistance
+                </div>
+              </div>
+            </div>
+
+            {/* ── Form Panel ── */}
+            <div className="cm-form-panel">
+              <form
+                onSubmit={handleSubmit}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 16,
+                  flex: 1,
+                  minHeight: 0,
+                }}
+              >
+                {/* Name + Email */}
+                <div className="cm-form-row">
+                  <div className="cm-field">
+                    <label className="cm-label">
+                      <FaUser className="cm-label-icon" />
+                      Your Name
+                      {isLoggedIn && !isEditingName && (
+                        <button
+                          type="button"
+                          className="cm-edit-btn edit"
+                          onClick={handleNameEdit}
+                        >
+                          <FaEdit size={9} /> Edit
+                        </button>
+                      )}
+                      {isLoggedIn && isEditingName && (
+                        <button
+                          type="button"
+                          className="cm-edit-btn save"
+                          onClick={handleNameSave}
+                        >
+                          <FaCheck size={9} /> Save
+                        </button>
+                      )}
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      disabled={isLoggedIn && !isEditingName}
+                      placeholder="Full name"
+                      className="cm-input"
+                    />
+                  </div>
+
+                  <div className="cm-field">
+                    <label className="cm-label">
+                      <FaEnvelope className="cm-label-icon" />
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      disabled={isLoggedIn}
+                      placeholder="your@email.com"
+                      className="cm-input"
+                    />
+                  </div>
+                </div>
+
+                {/* Subject */}
+                <div className="cm-field">
+                  <label className="cm-label">
+                    <FaTag className="cm-label-icon" />
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleChange}
+                    required
+                    placeholder="Brief subject of your inquiry"
+                    className="cm-input"
+                  />
+                </div>
+
+                {/* Message */}
+                <div className="cm-msg-field">
+                  <label className="cm-label">
+                    <FaPaperPlane className="cm-label-icon" />
+                    Message
+                  </label>
+                  <textarea
+                    name="message"
+                    value={formData.message}
+                    onChange={handleChange}
+                    required
+                    placeholder="Please describe your issue or question in detail..."
+                    className="cm-textarea"
+                  />
+                </div>
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !isLoggedIn}
+                  className={`cm-submit ${!isLoggedIn || isSubmitting ? "disabled" : "active"}`}
+                >
+                  {!isLoggedIn ? (
+                    "Please Login to Send Message"
+                  ) : isSubmitting ? (
+                    <>
+                      <div className="cm-spinner" /> Sending Your Message...
+                    </>
+                  ) : (
+                    <>
+                      <FaPaperPlane size={13} /> Send Message
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Force sidebar visible on desktop */}
+          <style>{`
+            @media(min-width:1024px){
+              #cm-sidebar-panel{ display:flex !important; }
+            }
+          `}</style>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
